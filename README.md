@@ -79,21 +79,15 @@ cd Selective_Object_Tracking
 
 ---
 
-## 2. Create virtual environment
+## 2. Create Conda virtual environment
 
 ### Windows
 
 ```bash
-python -m venv venv
-venv\Scripts\activate
+Conda create -n myenv
+conda activate myenv
 ```
 
-### Linux / Mac
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
 
 ---
 
