@@ -18,127 +18,176 @@ INPUT_PATH = os.path.join(ROOT_DIR, "temp_input.mp4")
 OUTPUT_PATH = os.path.join(ROOT_DIR, "outputs", "output.mp4")
 
 # =========================
+# SESSION STATES
+# =========================
+if "frame_idx" not in st.session_state:
+    st.session_state.frame_idx = 0
+
+if "uploaded_name" not in st.session_state:
+    st.session_state.uploaded_name = ""
+
+if "is_tracking" not in st.session_state:
+    st.session_state.is_tracking = False
+
+# =========================
 # UI
 # =========================
 st.title("Multi Object Tracking System")
 
-uploaded_file = st.file_uploader(
-    "Upload Video",
-    type=["mp4", "avi", "mov"]
+# =========================
+# SIDEBAR
+# =========================
+st.sidebar.title("System Info")
+
+source_type = st.sidebar.selectbox(
+    "Video Source",
+    ["Upload Video", "Webcam"]
 )
 
-if uploaded_file is not None:
+target_id = st.sidebar.number_input(
+    "Track ID to follow",
+    min_value=0,
+    value=0,
+    step=1
+)
 
-    # =========================
-    # SESSION STATES
-    # =========================
-    if "frame_idx" not in st.session_state:
-        st.session_state.frame_idx = 0
+classes = [
+    'all',
+    "person",
+    "car",
+    "truck",
+    "bus",
+    "motorcycle"
+]
 
-    if "uploaded_name" not in st.session_state:
-        st.session_state.uploaded_name = ""
+selected_class = st.sidebar.selectbox(
+    "Select Class",
+    classes
+)
 
-    # =========================
-    # SAVE VIDEO ONLY IF NEW
-    # =========================
-    if st.session_state.uploaded_name != uploaded_file.name:
+# =========================
+# RESET IF CLASS CHANGED
+# =========================
+if "previous_class" not in st.session_state:
+    st.session_state.previous_class = selected_class
 
-        with open(INPUT_PATH, "wb") as f:
-            f.write(uploaded_file.read())
+if selected_class != st.session_state.previous_class:
 
-        st.session_state.uploaded_name = uploaded_file.name
-        st.session_state.frame_idx = 0
+    st.session_state.frame_idx = 0
 
-    st.success("Video Uploaded")
+    st.session_state.previous_class = selected_class
 
-    # =========================
-    # VIDEO INFO
-    # =========================
-    cap = cv2.VideoCapture(INPUT_PATH)
+# =========================
+# VIDEO SOURCE
+# =========================
+input_source = None
+total_frames = 1
 
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+# ---------- Upload Video ----------
+if source_type == "Upload Video":
 
-    cap.release()
-
-    # =========================
-    # RESET IF REACHED END
-    # =========================
-    if st.session_state.frame_idx >= total_frames:
-        st.session_state.frame_idx = 0
-
-    # =========================
-    # SIDEBAR
-    # =========================
-    st.sidebar.title("System Info")
-
-    fps_box = st.sidebar.empty()
-    track_box = st.sidebar.empty()
-
-    target_id = st.sidebar.number_input(
-        "Track ID to follow",
-        min_value=0,
-        value=0,
-        step=1
+    uploaded_file = st.file_uploader(
+        "Upload Video",
+        type=["mp4", "avi", "mov"]
     )
 
-    classes = [
-        "person",
-        "car",
-        "truck",
-        "bus",
-        "motorcycle"
-    ]
+    if uploaded_file is not None:
 
-    selected_class = st.sidebar.selectbox(
-        "Select Class",
-        classes
-    )
+        if st.session_state.uploaded_name != uploaded_file.name:
 
-    # initialize selected class state
-    if "previous_class" not in st.session_state:
-        st.session_state.previous_class = selected_class
+            with open(INPUT_PATH, "wb") as f:
+                f.write(uploaded_file.read())
 
-    # reset if class changed
-    if selected_class != st.session_state.previous_class:
+            st.session_state.uploaded_name = uploaded_file.name
+            st.session_state.frame_idx = 0
 
-        st.session_state.frame_idx = 0
+        input_source = INPUT_PATH
 
+        st.success("Video Uploaded")
 
+        cap = cv2.VideoCapture(INPUT_PATH)
 
-        st.session_state.previous_class = selected_class
-    # st.write("Selected class:", selected_class)
-    progress_bar = st.sidebar.progress(0)
+        total_frames = int(
+            cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        )
 
-    video_box = st.empty()
+        cap.release()
 
-    # =========================
-    # START PROCESSING
-    # =========================
-    if st.button("Start Tracking"):
+        # reset if video ended
+        if st.session_state.frame_idx >= total_frames:
+            st.session_state.frame_idx = 0
 
-        for frame, info in pipeline.process_video(
-            INPUT_PATH,
-            skip_frames=1,
-            target_id=target_id,
-            start_frame=st.session_state.frame_idx,
-            selected_class=selected_class
-        ):
+# ---------- Webcam ----------
+elif source_type == "Webcam":
 
-            st.session_state.frame_idx = info["frame_count"]
+    input_source = 0
 
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+# =========================
+# UI BOXES
+# =========================
+fps_box = st.sidebar.empty()
+track_box = st.sidebar.empty()
+progress_bar = st.sidebar.progress(0)
 
-            video_box.image(frame, channels="RGB")
+video_box = st.empty()
 
-            fps_box.metric(
-                "FPS",
-                f"{info['fps']:.2f}"
-            )
+# =========================
+# START / STOP BUTTONS
+# =========================
+col1, col2 = st.columns(2)
 
-            track_box.metric(
-                "Tracks",
-                info["tracks"]
-            )
+with col1:
+    if st.button("▶ Start Tracking"):
+        st.session_state.is_tracking = True
+
+with col2:
+    if st.button("⏹ Stop Tracking"):
+        st.session_state.is_tracking = False
+
+# =========================
+# START PROCESSING
+# =========================
+if st.session_state.is_tracking and input_source is not None:
+
+    for frame, info in pipeline.process_video(
+        input_source,
+        skip_frames=1,
+        target_id=target_id,
+        start_frame=(
+            0 if source_type == "Webcam"
+            else st.session_state.frame_idx
+        ),
+        selected_class=selected_class
+    ):
+
+        # stop immediately
+        if not st.session_state.is_tracking:
+            break
+
+        st.session_state.frame_idx = info["frame_count"]
+
+        frame = cv2.cvtColor(
+            frame,
+            cv2.COLOR_BGR2RGB
+        )
+
+        video_box.image(
+            frame,
+            channels="RGB"
+        )
+
+        fps_box.metric(
+            "FPS",
+            f"{info['fps']:.2f}"
+        )
+
+        track_box.metric(
+            "Tracks",
+            info["tracks"]
+        )
+
+        # only for uploaded videos
+        if source_type == "Upload Video":
 
             progress_bar.progress(
                 min(
@@ -150,5 +199,8 @@ if uploaded_file is not None:
 # =========================
 # FINAL VIDEO
 # =========================
-if os.path.exists(OUTPUT_PATH):
+if (
+    source_type == "Upload Video"
+    and os.path.exists(OUTPUT_PATH)
+):
     st.video(OUTPUT_PATH)
