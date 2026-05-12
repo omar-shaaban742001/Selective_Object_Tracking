@@ -5,10 +5,10 @@ from detection import detector
 from tracker import tracking
 
 
-def process_video(input_path, skip_frames):
+def process_video(input_path, skip_frames, start_frame, target_id, selected_class):
 
     cap = cv2.VideoCapture(input_path)
-
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -44,7 +44,7 @@ def process_video(input_path, skip_frames):
         detections, names = detector(frame, config.MODEL_MIDIUM_PATH)
 
         for det in detections:
-            if names[det['class_id']]:
+            if names[det['class_id']] == selected_class:
                 xyxy.append(det['bbox'])
                 confidences.append(det['confidence'])
                 class_ids.append(det['class_id'])
@@ -57,10 +57,17 @@ def process_video(input_path, skip_frames):
 
         # draw boxes
         for track in tracked_objects:
+
             x1, y1, x2, y2 = map(int, track[0])
             track_id = int(track[4])
+            # 🎯 highlight selected ID
+            if target_id is not None and track_id == target_id:
+                color = (0, 0, 255)
+            else:
+                color = (0, 255, 0)
+            
 
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
             cv2.putText(
                 frame,
                 f"ID: {track_id}",
