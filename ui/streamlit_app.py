@@ -94,6 +94,18 @@ if uploaded_file is not None:
         classes
     )
 
+    # initialize selected class state
+    if "previous_class" not in st.session_state:
+        st.session_state.previous_class = selected_class
+
+    # reset if class changed
+    if selected_class != st.session_state.previous_class:
+
+        st.session_state.frame_idx = 0
+
+
+
+        st.session_state.previous_class = selected_class
     # st.write("Selected class:", selected_class)
     progress_bar = st.sidebar.progress(0)
 
