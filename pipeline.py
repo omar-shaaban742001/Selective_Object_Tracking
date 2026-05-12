@@ -59,23 +59,26 @@ def process_video(input_path, skip_frames, start_frame, target_id, selected_clas
             )
 
         for track in tracked_objects:
-
+            # print(track)
             x1, y1, x2, y2 = map(int, track[0])
             track_id = int(track[4])
 
             color = (0, 0, 255) if track_id == target_id else (0, 255, 0)
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            class_id = int(track[3])  # if tracker returns it
+            class_name = names[class_id]
 
             cv2.putText(
                 frame,
-                f"ID: {track_id}",
+                f"ID: {track_id} | {class_name}",
                 (x1, y1 - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
                 color,
                 2
             )
+
 
         writer.write(frame)
 
