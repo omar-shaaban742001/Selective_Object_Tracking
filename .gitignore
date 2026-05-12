@@ -221,3 +221,4 @@ __marimo__/
 models/*.pt
 runs
 outputs
+temp_input.mp4
