@@ -222,4 +222,8 @@ models/*.pt
 runs
 outputs
 temp_input.mp4
-models\yolo26m_ncnn_model\
+models\yolo26m_ncnn_model
+models\yolo26m_ncnn_model\metadata.yaml
+models\yolo26m_ncnn_model\model.ncnn.param
+models\yolo26m_ncnn_model\model.ncnn.bin
+models\yolo26m_ncnn_model\model_ncnn.py
