@@ -222,3 +222,4 @@ models/*.pt
 runs
 outputs
 temp_input.mp4
+models\yolo26m_ncnn_model\

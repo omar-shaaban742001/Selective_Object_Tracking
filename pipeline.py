@@ -39,7 +39,7 @@ def process_video(input_path, skip_frames, start_frame, target_id, selected_clas
 
         xyxy, confidences, class_ids = [], [], []
 
-        detections, names = detector(frame, config.MODEL_MIDIUM_PATH)
+        detections, names = detector(frame, config.MODEL_MIDIUM_NCNN_PATH)
 
         for det in detections:
 
